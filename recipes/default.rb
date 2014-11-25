@@ -36,7 +36,7 @@ usernames.each do |username|
         comment "Github User #{username}"
         gid node['github_users']['group_name']
         home "/home/#{username}"
-        shell "/bin/bash"
+        shell node['github_users']['custom_shells'].key?(username) ? node['github_users']['custom_shells'][username] : "/bin/bash"
         system true
         supports :manage_home => true
 
