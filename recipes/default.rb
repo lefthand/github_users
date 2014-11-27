@@ -2,6 +2,11 @@ require 'json'
 require 'open-uri'
 
 usernames = []
+headers = {}
+
+if node['github_users']['auth_token']
+    headers = {"Authorization" => "token #{node['github_users']['auth_token']}"}
+end
 
 if node['github_users']['organization']
     usernames = JSON.parse(
@@ -29,7 +34,7 @@ end
 
 usernames.each do |username|
     public_keys = JSON.parse(
-        open("https://api.github.com/users/#{username}/keys").read
+        open("https://api.github.com/users/#{username}/keys", headers).read
     ).map{|k| k['key']}
 
     user username do

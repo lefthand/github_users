@@ -12,6 +12,7 @@ This will allow members of your organization to SSH into servers using their own
 * `node[github_users][group_id]` - Group id users will belong to (default `2157`)
 * `node[github_users][allow_sudo]` - Allow passwordless sudo for the users (default `true`)
 * `node['github_users'][custom_shells]` - Hash with {user:shell} pairs to override default '/bin/bash' for given users
+* `node['github_users']['auth_token']` - Token to be used for authorization to Github
 
 ## Usage
 
