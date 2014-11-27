@@ -12,6 +12,10 @@ if node['github_users']['organization']
     usernames = JSON.parse(
         open("https://api.github.com/orgs/#{node['github_users']['organization']}/public_members").read
     ).map{|u| u['login']}
+elsif node['github_users']['team']
+    usernames = JSON.parse(
+        open("https://api.github.com/teams/#{node['github_users']['team']}/members", headers).read
+    ).map{|u| u['login']}
 elsif node['github_users']['users']
     usernames = node['github_users']['users']
 end
