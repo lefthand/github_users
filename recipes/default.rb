@@ -4,6 +4,8 @@ require 'open-uri'
 usernames = []
 headers = {}
 
+package 'git' if node['github_users']['fetch_dotfiles']
+
 if node['github_users']['auth_token']
     headers = {"Authorization" => "token #{node['github_users']['auth_token']}"}
 end
@@ -50,6 +52,28 @@ usernames.each do |username|
         supports :manage_home => true
 
         action :create
+    end
+
+    if node['github_users']['fetch_dotfiles']
+        begin
+            open("https://api.github.com/repos/#{username}/dotfiles")
+            git "/home/#{username}/Dotfiles" do
+                repository "https://github.com/#{username}/dotfiles.git"
+                action :sync
+                user username
+                group group_name
+                notifies :run, "bash[copy_dotfiles]", :immediately
+            end
+            bash "copy_dotfiles" do
+                cwd "/home/#{username}"
+                user username
+                group group_name
+                code "ln -st /home/#{username} /home/#{username}/Dotfiles/{.??*,*}; rm /home/#{username}/.git"
+                action :nothing
+            end
+        rescue OpenURI::HTTPError
+            log "Repository dotfiles for user #{username} not found"
+        end
     end
 
     directory "/home/#{username}/.ssh" do

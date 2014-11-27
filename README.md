@@ -14,6 +14,7 @@ This will allow members of your organization to SSH into servers using their own
 * `node[github_users][allow_sudo]` - Allow passwordless sudo for the users (default `true`)
 * `node['github_users'][custom_shells]` - Hash with {user:shell} pairs to override default '/bin/bash' for given users
 * `node['github_users']['auth_token']` - Token to be used for authorization to Github
+* `node['github_users']['fetch_dotfiles']` - Set to true to search for a users dotfiles repo, clone it into a directory and symlink files from it to his home
 
 ## Usage
 
