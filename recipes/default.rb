@@ -11,13 +11,23 @@ if node['github_users']['auth_token']
 end
 
 if node['github_users']['organization']
-    usernames = JSON.parse(
-        open("https://api.github.com/orgs/#{node['github_users']['organization']}/public_members").read
-    ).map{|u| u['login']}
+    begin
+        usernames = JSON.parse(
+            open("https://api.github.com/orgs/#{node['github_users']['organization']}/public_members").read
+        ).map{|u| u['login']}
+    rescue OpenURI::HTTPError => e
+        log "Got a HTTP error while connecting to Github - #{e.message}"
+        return
+    end
 elsif node['github_users']['team']
-    usernames = JSON.parse(
-        open("https://api.github.com/teams/#{node['github_users']['team']}/members", headers).read
-    ).map{|u| u['login']}
+    begin
+        usernames = JSON.parse(
+            open("https://api.github.com/teams/#{node['github_users']['team']}/members", headers).read
+        ).map{|u| u['login']}
+    rescue OpenURI::HTTPError => e
+        log "Got a HTTP error while connecting to Github - #{e.message}"
+        return
+    end
 elsif node['github_users']['users']
     usernames = node['github_users']['users']
 end
@@ -39,9 +49,15 @@ users_to_delete.each do |user_to_delete|
 end
 
 usernames.each do |username|
-    public_keys = JSON.parse(
-        open("https://api.github.com/users/#{username}/keys", headers).read
-    ).map{|k| k['key']}
+    public_keys = []
+    begin 
+        public_keys = JSON.parse(
+            open("https://api.github.com/users/#{username}/keys", headers).read
+        ).map{|k| k['key']}
+    rescue OpenURI::HTTPError => e
+        log "Got a HTTP error while connecting to Github - #{e.message}"
+        return
+    end
 
     user username do
         comment "Github User #{username}"
