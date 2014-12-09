@@ -7,7 +7,7 @@ headers = {}
 package 'git' if node['github_users']['fetch_dotfiles']
 
 if node['github_users']['auth_token']
-    headers = {"Authorization" => "token #{node['github_users']['auth_token']}"}
+    headers["Authorization"] = "token #{node['github_users']['auth_token']}"
 end
 
 if node['github_users']['organization']
@@ -49,16 +49,6 @@ users_to_delete.each do |user_to_delete|
 end
 
 usernames.each do |username|
-    public_keys = []
-    begin 
-        public_keys = JSON.parse(
-            open("https://api.github.com/users/#{username}/keys", headers).read
-        ).map{|k| k['key']}
-    rescue OpenURI::HTTPError => e
-        log "Got a HTTP error while connecting to Github - #{e.message}"
-        return
-    end
-
     user username do
         comment "Github User #{username}"
         gid node['github_users']['group_name']
@@ -72,23 +62,30 @@ usernames.each do |username|
 
     if node['github_users']['fetch_dotfiles']
         begin
-            open("https://api.github.com/repos/#{username}/dotfiles", headers)
-            git "/home/#{username}/Dotfiles" do
-                repository "https://github.com/#{username}/dotfiles.git"
-                action :sync
-                user username
-                group group_name
-                notifies :run, "bash[copy_dotfiles]", :immediately
+            limited_headers = node['github_users']["#{username}_git_etag"] == nil ? headers : headers.merge("If-None-Match" => node['github_users']["#{username}_git_etag"])
+            request = open("https://api.github.com/users/#{username}/repos", limited_headers)
+            node.set['github_users']["#{username}_git_etag"] = request.meta["etag"]
+            repos = JSON.parse(request.read).map{|k| k['name']}
+            if repos.include?("dotfiles")
+                git "/home/#{username}/Dotfiles" do
+                    repository "https://github.com/#{username}/dotfiles.git"
+                    action :sync
+                    user username
+                    group group_name
+                    notifies :run, "bash[copy_dotfiles]", :immediately
+                end
+                bash "copy_dotfiles" do
+                    cwd "/home/#{username}"
+                    user username
+                    group group_name
+                    code "ln -st /home/#{username} /home/#{username}/Dotfiles/{.??*,*}; rm .git; find -L -maxdepth 1 -type l -delete"
+                    action :nothing
+                end
+            else
+                log "Repository dotfiles for user #{username} not found"
             end
-            bash "copy_dotfiles" do
-                cwd "/home/#{username}"
-                user username
-                group group_name
-                code "ln -st /home/#{username} /home/#{username}/Dotfiles/{.??*,*}; rm .git; find -L -maxdepth 1 -type l -delete"
-                action :nothing
-            end
-        rescue OpenURI::HTTPError
-            log "Repository dotfiles for user #{username} not found"
+        rescue OpenURI::HTTPError => e
+            log "Repository dotfiles for user #{username} up-to-date - #{e.message}"
         end
     end
 
@@ -99,14 +96,22 @@ usernames.each do |username|
         action :create
     end
 
-    template "/home/#{username}/.ssh/authorized_keys" do
-        source "authorized_keys.erb"
-        owner username
-        group node['github_users']['group_name']
-        mode "0600"
-        variables(
-            :public_keys => public_keys
-        )
+    begin 
+        limited_headers = node['github_users']["#{username}_key_etag"] == nil ? headers : headers.merge("If-None-Match" => node['github_users']["#{username}_key_etag"])
+        request = open("https://api.github.com/users/#{username}/keys", limited_headers)
+        node.set['github_users']["#{username}_key_etag"] = request.meta["etag"]
+        public_keys = JSON.parse(request.read).map{|k| k['key']}
+        template "/home/#{username}/.ssh/authorized_keys" do
+            source "authorized_keys.erb"
+            owner username
+            group node['github_users']['group_name']
+            mode "0600"
+            variables(
+                :public_keys => public_keys
+            )
+        end
+    rescue OpenURI::HTTPError => e
+        log "Got a HTTP error while connecting to Github - #{e.message}"
     end
 
     if node['github_users']['allow_sudo']
