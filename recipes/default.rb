@@ -72,7 +72,7 @@ usernames.each do |username|
 
     if node['github_users']['fetch_dotfiles']
         begin
-            open("https://api.github.com/repos/#{username}/dotfiles")
+            open("https://api.github.com/repos/#{username}/dotfiles", headers)
             git "/home/#{username}/Dotfiles" do
                 repository "https://github.com/#{username}/dotfiles.git"
                 action :sync
@@ -84,7 +84,7 @@ usernames.each do |username|
                 cwd "/home/#{username}"
                 user username
                 group group_name
-                code "ln -st /home/#{username} /home/#{username}/Dotfiles/{.??*,*}; rm /home/#{username}/.git"
+                code "ln -st /home/#{username} /home/#{username}/Dotfiles/{.??*,*}; rm .git; find -L -maxdepth 1 -type l -delete"
                 action :nothing
             end
         rescue OpenURI::HTTPError
