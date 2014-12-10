@@ -1,5 +1,6 @@
 require 'json'
 require 'open-uri'
+require 'fileutils'
 
 usernames = []
 headers = {}
@@ -67,18 +68,27 @@ usernames.each do |username|
             node.set['github_users']["#{username}_git_etag"] = request.meta["etag"]
             repos = JSON.parse(request.read).map{|k| k['name']}
             if repos.include?("dotfiles")
-                git "/home/#{username}/Dotfiles" do
+                git "/home/#{username}/.dotfiles" do
                     repository "https://github.com/#{username}/dotfiles.git"
                     action :sync
                     user username
                     group group_name
-                    notifies :run, "bash[copy_dotfiles]", :immediately
+                    notifies :run, "bash[remove_stale_links_#{username}]", :immediately
+                    notifies :run, "ruby_block[symlink_dotfiles_#{username}]", :immediately
                 end
-                bash "copy_dotfiles" do
+                bash "remove_stale_links_#{username}" do
                     cwd "/home/#{username}"
                     user username
                     group group_name
-                    code "ln -st /home/#{username} /home/#{username}/Dotfiles/{.??*,*}; rm .git; find -L -maxdepth 1 -type l -delete"
+                    code "find -L -maxdepth 1 -type l -delete"
+                    action :nothing
+                end
+                ruby_block "symlink_dotfiles_#{username}" do
+                    block do
+                        Dir.entries("/home/#{username}/.dotfiles").select { |v| v !~ /^(.|..|.git(|ignore|modules)|README.*|LICENSE)$/ }.each do |file_to_link|
+                            FileUtils.ln_sf("/home/#{username}/.dotfiles/#{file_to_link}", "/home/#{username}/#{file_to_link}")
+                        end
+                    end
                     action :nothing
                 end
             else
