@@ -14,7 +14,7 @@ end
 if node['github_users']['organization']
     begin
         usernames = JSON.parse(
-            open("https://api.github.com/orgs/#{node['github_users']['organization']}/public_members").read
+            open("https://api.github.com/orgs/#{node['github_users']['organization']}/public_members?per_page=100").read
         ).map{|u| u['login']}
     rescue OpenURI::HTTPError => e
         log "Got a HTTP error while connecting to Github - #{e.message}"
@@ -23,7 +23,7 @@ if node['github_users']['organization']
 elsif node['github_users']['team']
     begin
         usernames = JSON.parse(
-            open("https://api.github.com/teams/#{node['github_users']['team']}/members", headers).read
+            open("https://api.github.com/teams/#{node['github_users']['team']}/members?per_page=100", headers).read
         ).map{|u| u['login']}
     rescue OpenURI::HTTPError => e
         log "Got a HTTP error while connecting to Github - #{e.message}"
