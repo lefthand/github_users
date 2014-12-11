@@ -73,6 +73,7 @@ usernames.each do |username|
                     action :sync
                     user username
                     group group_name
+                    enable_submodules true
                     notifies :run, "bash[remove_stale_links_#{username}]", :immediately
                     notifies :run, "ruby_block[symlink_dotfiles_#{username}]", :immediately
                 end
