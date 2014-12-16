@@ -74,8 +74,8 @@ usernames.each do |username|
                     user username
                     group group_name
                     enable_submodules true
-                    notifies :run, "bash[remove_stale_links_#{username}]", :immediately
                     notifies :run, "ruby_block[symlink_dotfiles_#{username}]", :immediately
+                    notifies :run, "bash[remove_stale_links_#{username}]", :immediately
                 end
                 bash "remove_stale_links_#{username}" do
                     cwd "/home/#{username}"
@@ -86,8 +86,9 @@ usernames.each do |username|
                 end
                 ruby_block "symlink_dotfiles_#{username}" do
                     block do
-                        Dir.entries("/home/#{username}/.dotfiles").select { |v| v !~ /^(.|..|.git(|ignore|modules)|README.*|LICENSE)$/ }.each do |file_to_link|
+                        Dir.entries("/home/#{username}/.dotfiles").select { |v| v !~ /^(\.|\.\.|\.git(|ignore|modules)|README.*|LICENSE)$/ }.each do |file_to_link|
                             FileUtils.ln_sf("/home/#{username}/.dotfiles/#{file_to_link}", "/home/#{username}/#{file_to_link}")
+                            FileUtils.chown(username, group_name, "/home/#{username}/#{file_to_link}")
                         end
                     end
                     action :nothing
