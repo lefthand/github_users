@@ -67,37 +67,45 @@ usernames.each do |username|
             request = open("https://api.github.com/users/#{username}/repos", limited_headers)
             node.set['github_users']["#{username}_git_etag"] = request.meta["etag"]
             repos = JSON.parse(request.read).map{|k| k['name']}
-            if repos.include?("dotfiles")
-                git "/home/#{username}/.dotfiles" do
-                    repository "https://github.com/#{username}/dotfiles.git"
-                    action :sync
-                    user username
-                    group group_name
-                    enable_submodules true
-                    notifies :run, "ruby_block[symlink_dotfiles_#{username}]", :immediately
-                    notifies :run, "bash[remove_stale_links_#{username}]", :immediately
-                end
-                bash "remove_stale_links_#{username}" do
-                    cwd "/home/#{username}"
-                    user username
-                    group group_name
-                    code "find -L -maxdepth 1 -type l -delete"
-                    action :nothing
-                end
-                ruby_block "symlink_dotfiles_#{username}" do
-                    block do
-                        Dir.entries("/home/#{username}/.dotfiles").select { |v| v !~ /^(\.|\.\.|\.git(|ignore|modules)|README.*|LICENSE)$/ }.each do |file_to_link|
-                            FileUtils.ln_sf("/home/#{username}/.dotfiles/#{file_to_link}", "/home/#{username}/#{file_to_link}")
-                            FileUtils.chown(username, group_name, "/home/#{username}/#{file_to_link}")
-                        end
-                    end
-                    action :nothing
-                end
-            else
-                log "Repository dotfiles for user #{username} not found"
-            end
+            node.set['github_users']["#{username}_git_repos"] = repos
         rescue OpenURI::HTTPError => e
             log "Repository dotfiles for user #{username} up-to-date - #{e.message}"
+        end
+        if node['github_users'].key?("#{username}_git_repos") and node['github_users']["#{username}_git_repos"].include?("dotfiles")
+            ruby_block "fix_permissions_#{username}" do
+                block do
+                    FileUtils.chown_R(username, group_name, "/home/#{username}/.dotfiles")
+                end
+                action :nothing
+            end
+            bash "remove_stale_links_#{username}" do
+                cwd "/home/#{username}"
+                user username
+                group group_name
+                code "find -L -maxdepth 1 -type l -delete"
+                action :nothing
+            end
+            ruby_block "symlink_dotfiles_#{username}" do
+                block do
+                    Dir.entries("/home/#{username}/.dotfiles").select { |v| v !~ /^(\.|\.\.|\.git(|ignore|modules)|README.*|LICENSE)$/ }.each do |file_to_link|
+                        FileUtils.ln_sf("/home/#{username}/.dotfiles/#{file_to_link}", "/home/#{username}/#{file_to_link}")
+                        FileUtils.chown(username, group_name, "/home/#{username}/#{file_to_link}")
+                    end
+                end
+                action :nothing
+            end
+            git "/home/#{username}/.dotfiles" do
+                repository "https://github.com/#{username}/dotfiles.git"
+                action :export
+                user username
+                group group_name
+                enable_submodules true
+                notifies :run, "ruby_block[fix_permissions_#{username}]", :immediately
+                notifies :run, "ruby_block[symlink_dotfiles_#{username}]", :immediately
+                notifies :run, "bash[remove_stale_links_#{username}]", :immediately
+            end
+        else
+            log "Repository dotfiles for user #{username} not found"
         end
     end
 
