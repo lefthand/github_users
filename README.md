@@ -9,6 +9,7 @@ This will allow members of your organization to SSH into servers using their own
 * `node[github_users][organization]` - Github organization to search for public members
 * `node['github_users']['team']` - Github numeric team id to search for members
 * `node[github_users][users]` - List of Github users, if you don't want to use the `organization` attribute
+* `node[github_users][user]` - If set, This user will be created and all github user's ssh keys will be added to it. No individual accounts will be created.
 * `node[github_users][group_name]` - Group name users will belong to (default `'github'`)
 * `node[github_users][group_id]` - Group id users will belong to (default `2157`)
 * `node[github_users][allow_sudo]` - Allow passwordless sudo for the users (default `true`)
