@@ -53,7 +53,7 @@ if node['github_users']['user']
   user node['github_users']['user'] do
       gid node['github_users']['group_name']
       home "/home/#{node['github_users']['user']}"
-      system true
+      password node['github_users']['user_password']
       supports :manage_home => true
       action :create
   end

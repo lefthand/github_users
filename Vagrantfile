@@ -28,8 +28,8 @@ SCRIPT
     chef.json = {
       :instance_role => 'vagrant',
       :github_users => {
-        :users => ["user1","user2","user3"],
-        :group_name => 'my-group',
+        :users => ["user1","user2"],
+        :group_name => 'my-user',
         :user => 'my-user'
       }
     }
