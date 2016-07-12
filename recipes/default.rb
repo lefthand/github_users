@@ -70,7 +70,7 @@ if node['github_users']['user']
           limited_headers = node['github_users']["#{username}_key_etag"] == nil ? headers : headers.merge("If-None-Match" => node['github_users']["#{username}_key_etag"])
           request = open("https://api.github.com/users/#{username}/keys", limited_headers)
           node.set['github_users']["#{username}_key_etag"] = request.meta["etag"]
-          public_keys << JSON.parse(request.read).map{|k| k['key']}
+          JSON.parse(request.read).each{|k| public_keys << k['key']}
       rescue OpenURI::HTTPError => e
           log "Got a HTTP error while connecting to Github - #{e.message}"
       end
