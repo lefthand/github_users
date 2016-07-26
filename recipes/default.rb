@@ -52,6 +52,7 @@ end
 if node['github_users']['user']
   user node['github_users']['user'] do
       gid node['github_users']['group_name']
+      uid node['github_users']['user_id']
       home "/home/#{node['github_users']['user']}"
       password node['github_users']['user_password']
       supports :manage_home => true
