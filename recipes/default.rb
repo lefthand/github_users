@@ -55,6 +55,7 @@ if node['github_users']['user']
       uid node['github_users']['user_id']
       home "/home/#{node['github_users']['user']}"
       password node['github_users']['user_password']
+      shell node['github_users']['custom_shells'].key?(node['github_users']['user']) ? node['github_users']['custom_shells'][node['github_users']['user']] : "/bin/bash"
       supports :manage_home => true
       action :create
   end
