@@ -56,7 +56,7 @@ if node['github_users']['user']
       home "/home/#{node['github_users']['user']}"
       password node['github_users']['user_password']
       shell node['github_users']['custom_shells'].key?(node['github_users']['user']) ? node['github_users']['custom_shells'][node['github_users']['user']] : "/bin/bash"
-      supports :manage_home => true
+      manage_home true
       action :create
   end
   directory "/home/#{node['github_users']['user']}/.ssh" do
@@ -95,7 +95,7 @@ else
           home "/home/#{username}"
           shell node['github_users']['custom_shells'].key?(username) ? node['github_users']['custom_shells'][username] : "/bin/bash"
           system true
-          supports :manage_home => true
+          manage_home true
 
           action :create
       end

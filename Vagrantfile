@@ -24,7 +24,7 @@ SCRIPT
 
   config.vm.provision :chef_solo do |chef|
     chef.channel = "stable"
-    chef.version = "12.10.24"
+    chef.version = "12.14.77"
     chef.json = {
       :instance_role => 'vagrant',
       :github_users => {
