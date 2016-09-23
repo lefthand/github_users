@@ -28,9 +28,10 @@ SCRIPT
     chef.json = {
       :instance_role => 'vagrant',
       :github_users => {
-        :users => ["user1","user2"],
-        :group_name => 'my-user',
-        :user => 'my-user'
+        :auth_token => '',
+        :users => ["one","two"],
+        :group_name => 'user',
+        :user => 'user'
       }
     }
     chef.run_list = [

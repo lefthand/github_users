@@ -66,27 +66,48 @@ if node['github_users']['user']
       action :create
   end
 
-  public_keys = []
+  directory "#{Chef::Config[:file_cache_path]}/github_keys/" do
+    owner "root"
+    group "root"
+    mode "0755"
+    action :create
+  end
+
+  file "#{Chef::Config[:file_cache_path]}/github_users" do
+    owner "root"
+    group "root"
+    mode "0644"
+    content usernames.join("\n")
+  end
   usernames.each do |username|
+      public_keys = []
       begin
           limited_headers = node['github_users']["#{username}_key_etag"] == nil ? headers : headers.merge("If-None-Match" => node['github_users']["#{username}_key_etag"])
           request = open("https://api.github.com/users/#{username}/keys", limited_headers)
           node.set['github_users']["#{username}_key_etag"] = request.meta["etag"]
           JSON.parse(request.read).each{|k| public_keys << "#{k['key']} #{username}-#{k['id']}"}
+
+          file "#{Chef::Config[:file_cache_path]}/github_keys/#{username}" do
+            owner "root"
+            group "root"
+            mode "0644"
+            content public_keys.join("\n")
+          end
+
       rescue OpenURI::HTTPError => e
-          log "Got a HTTP error while connecting to Github - #{e.message}"
+          log "Got a HTTP error while connecting to Github for user #{username} - #{e.message}"
       end
   end
-  template "/home/#{node['github_users']['user']}/.ssh/authorized_keys" do
-      source "authorized_keys.erb"
-      owner node['github_users']['user']
-      group node['github_users']['group_name']
-      mode "0600"
-      variables(
-          :public_keys => public_keys
-      )
-      only_if { public_keys.length > 0 }
+  bash "Update-user-ssh-keys" do
+    cwd "#{Chef::Config[:file_cache_path]}/github_keys/"
+    code <<-EOH
+    for file in *
+        do grep -q -F "$file" #{Chef::Config[:file_cache_path]}/github_users || rm "$file"
+    done
+    for f in #{Chef::Config[:file_cache_path]}/github_keys/*; do cat "${f}"; echo; done > /home/#{node['github_users']['user']}/.ssh/authorized_keys
+    EOH
   end
+
 else
   usernames.each do |username|
       user username do
